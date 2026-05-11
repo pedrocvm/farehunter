@@ -8,8 +8,10 @@
     "jsx": "preserve",
     "incremental": true,
     "allowJs": true,
-    "outDir": undefined,
-    "rootDir": undefined,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "outDir": null,
+    "rootDir": null,
     "paths": {
       "@/*": ["./src/*"]
     },

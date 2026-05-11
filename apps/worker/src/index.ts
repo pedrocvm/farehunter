@@ -6,8 +6,9 @@ const connection = { url: env.REDIS_URL }
 
 const worker = new Worker(
   'fare-scan',
-  async (job) => {
+  (job) => {
     logger.info({ jobId: job.id, name: job.name }, 'Processing job')
+    return Promise.resolve()
   },
   { connection },
 )

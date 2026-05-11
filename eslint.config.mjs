@@ -10,6 +10,10 @@ export default tseslint.config(
         projectService: true,
       },
     },
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-extraneous-class': 'off',
+    },
   },
   {
     ignores: ['**/node_modules/**', '**/.next/**', '**/dist/**', '**/*.config.*'],

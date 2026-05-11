@@ -51,3 +51,15 @@ export type {
   PriceTargetInput,
   NotificationRuleInput,
 } from './schemas.js'
+
+export { ResultHashService } from './services/hash.js'
+export type { HashParams } from './services/hash.js'
+
+export { NormalizerService } from './services/normalizer.js'
+export type { NormalizationResult } from './services/normalizer.js'
+
+export { DeduplicatorService } from './services/deduplicator.js'
+export type { DedupeAction, DedupeResult } from './services/deduplicator.js'
+
+export { FareValidationService } from './services/validation.js'
+export type { ValidationIssue, ValidationResult } from './services/validation.js'
