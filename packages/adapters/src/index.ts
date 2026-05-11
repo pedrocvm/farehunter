@@ -1,3 +1,3 @@
 export { MockAdapter } from './mock/index.js'
-export { SearchParamsSchema } from './types.js'
-export type { FlightAdapter, SearchParams } from './types.js'
+export { FlightSearchInputSchema } from './types.js'
+export type { AirlineAdapter, AdapterHealthResult, FlightSearchInput, NormalizedFareResult } from './types.js'

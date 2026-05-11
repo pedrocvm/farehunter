@@ -7,35 +7,597 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Flight {
-  id          String   @id @default(cuid())
-  origin      String
-  destination String
-  departureAt DateTime
-  returnAt    DateTime?
-  price       Decimal  @db.Decimal(10, 2)
-  currency    String   @default("BRL")
-  airline     String
-  stops       Int      @default(0)
-  source      String
-  score       Float?
-  fetchedAt   DateTime @default(now())
-  createdAt   DateTime @default(now())
+// ─── Enums ───────────────────────────────────────────────────────────────────
 
+enum CabinClass {
+  ECONOMY
+  PREMIUM_ECONOMY
+  BUSINESS
+  FIRST
+}
+
+enum TripType {
+  ONE_WAY
+  ROUND_TRIP
+  MULTI_CITY
+}
+
+enum FareStatus {
+  ACTIVE
+  EXPIRED
+  UNVERIFIED
+  REVALIDATED
+  POSSIBLE_ERROR
+  LOW_CONFIDENCE
+  NEEDS_REVIEW
+}
+
+enum AdapterStatus {
+  MOCK
+  ACTIVE
+  PAUSED
+  DISABLED
+  DO_NOT_USE
+}
+
+enum SourceAccessStatus {
+  ALLOWED
+  LIMITED
+  MANUAL_ONLY
+  DISABLED
+  DO_NOT_USE
+}
+
+enum SearchJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AlertLevel {
+  NORMAL
+  STRONG
+  EXCELLENT
+  RARE
+  REVIEW_BEFORE_BUY
+}
+
+enum FeedbackType {
+  LIKED
+  DISLIKED
+  IRRELEVANT
+  GOOD_PRICE_BAD_FLIGHT
+  BAD_DESTINATION
+  BAD_AIRPORT
+  NO_BAGGAGE_NOT_USEFUL
+  EXCELLENT_ALERT
+  WEAK_ALERT
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  timezone  String   @default("Europe/Lisbon")
+  currency  String   @default("EUR")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  preference         UserPreference?
+  telegram           TelegramConnection?
+  watchlists         Watchlist[]
+  priceTargets       PriceTarget[]
+  notificationRules  NotificationRule[]
+  notificationEvents NotificationEvent[]
+  favorites          UserFavorite[]
+  feedbacks          UserFeedback[]
+  scanBudget         ScanBudget?
+
+  @@map("users")
+}
+
+model UserPreference {
+  id                     String     @id @default(cuid())
+  userId                 String     @unique
+  defaultOriginAirport   String?
+  maxStops               Int        @default(1)
+  maxTravelDurationHours Int?
+  preferDirectFlights    Boolean    @default(false)
+  cabinClass             CabinClass @default(ECONOMY)
+  tripType               TripType   @default(ROUND_TRIP)
+  minTripDays            Int?
+  maxTripDays            Int?
+  adults                 Int        @default(1)
+  children               Int        @default(0)
+  infants                Int        @default(0)
+  includedAirlines       String[]
+  excludedAirlines       String[]
+  excludedAirports       String[]
+  notifyOnExpiry         Boolean    @default(true)
+  minAlertScore          Float      @default(70.0)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model TelegramConnection {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  chatId     String    @unique
+  username   String?
+  isActive   Boolean   @default(true)
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("telegram_connections")
+}
+
+model ScanBudget {
+  id                     String   @id @default(cuid())
+  userId                 String?  @unique
+  name                   String   @default("global")
+  maxJobsPerDay          Int      @default(100)
+  maxPlaywrightPerDay    Int      @default(0)
+  maxAiCallsPerDay       Int      @default(0)
+  maxProxyRequestsPerDay Int      @default(0)
+  currentDayJobs         Int      @default(0)
+  currentDayPlaywright   Int      @default(0)
+  currentDayAiCalls      Int      @default(0)
+  currentDayProxy        Int      @default(0)
+  resetAt                DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("scan_budgets")
+}
+
+// ─── Geography ───────────────────────────────────────────────────────────────
+
+model Airport {
+  iataCode    String  @id
+  name        String
+  city        String
+  country     String
+  countryCode String
+  timezone    String
+  isActive    Boolean @default(true)
+  latitude    Float?
+  longitude   Float?
+
+  routesAsOrigin      Route[] @relation("RouteOrigin")
+  routesAsDestination Route[] @relation("RouteDestination")
+
+  @@map("airports")
+}
+
+model Airline {
+  iataCode   String  @id
+  name       String
+  country    String?
+  isLowCost  Boolean @default(false)
+  hasFreeBag Boolean @default(false)
+  isActive   Boolean @default(true)
+
+  fareResults FareResult[]
+  segments    FareSegment[]
+
+  @@map("airlines")
+}
+
+// ─── Routes & Source Adapters ─────────────────────────────────────────────────
+
+model Route {
+  id              String    @id @default(cuid())
+  originCode      String
+  destinationCode String
+  isActive        Boolean   @default(true)
+  lastScannedAt   DateTime?
+  scanIntervalMin Int       @default(360)
+  priority        Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  origin      Airport @relation("RouteOrigin", fields: [originCode], references: [iataCode])
+  destination Airport @relation("RouteDestination", fields: [destinationCode], references: [iataCode])
+
+  searchJobs   SearchJob[]
+  fareResults  FareResult[]
   priceHistory PriceHistory[]
 
-  @@index([origin, destination])
+  @@unique([originCode, destinationCode])
+  @@index([isActive, priority])
+  @@map("routes")
+}
+
+model SourceAdapter {
+  id             String             @id @default(cuid())
+  name           String             @unique
+  displayName    String
+  baseUrl        String?
+  status         AdapterStatus      @default(MOCK)
+  accessStatus   SourceAccessStatus @default(ALLOWED)
+  requiresLogin  Boolean            @default(false)
+  requiresProxy  Boolean            @default(false)
+  usesPlaywright Boolean            @default(false)
+  rateLimit      Int?
+  avgResponseMs  Int?
+  isActive       Boolean            @default(true)
+  notes          String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  complianceRecords SourceComplianceRecord[]
+  searchJobs        SearchJob[]
+  crawlerLogs       CrawlerLog[]
+  healthChecks      AdapterHealthCheck[]
+
+  @@map("source_adapters")
+}
+
+model SourceComplianceRecord {
+  id              String    @id @default(cuid())
+  adapterId       String
+  reviewedAt      DateTime  @default(now())
+  reviewedBy      String?
+  termsUrl        String?
+  scrapingAllowed Boolean
+  robotsTxtUrl    String?
+  robotsTxtResult String?
+  notes           String?
+
+  adapter SourceAdapter @relation(fields: [adapterId], references: [id], onDelete: Cascade)
+
+  @@map("source_compliance_records")
+}
+
+// ─── Search Jobs ──────────────────────────────────────────────────────────────
+
+model SearchJob {
+  id               String          @id @default(cuid())
+  routeId          String
+  adapterId        String
+  status           SearchJobStatus @default(PENDING)
+  cabinClass       CabinClass      @default(ECONOMY)
+  tripType         TripType        @default(ROUND_TRIP)
+  departureDateMin DateTime
+  departureDateMax DateTime
+  returnDateMin    DateTime?
+  returnDateMax    DateTime?
+  adults           Int             @default(1)
+  children         Int             @default(0)
+  infants          Int             @default(0)
+  priority         Int             @default(0)
+  attempts         Int             @default(0)
+  maxAttempts      Int             @default(3)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  failedAt         DateTime?
+  errorMessage     String?
+  resultsFound     Int?
+  createdAt        DateTime        @default(now())
+
+  route       Route         @relation(fields: [routeId], references: [id])
+  adapter     SourceAdapter @relation(fields: [adapterId], references: [id])
+  fareResults FareResult[]
+
+  @@index([status, priority])
+  @@index([routeId, status])
+  @@map("search_jobs")
+}
+
+// ─── Fares ───────────────────────────────────────────────────────────────────
+
+model FareResult {
+  id              String     @id @default(cuid())
+  routeId         String
+  jobId           String?
+  airlineCode     String
+  cabinClass      CabinClass @default(ECONOMY)
+  tripType        TripType   @default(ROUND_TRIP)
+  departureAt     DateTime
+  returnAt        DateTime?
+  durationMinutes Int?
+  layoverMinutes  Int?
+  stops           Int        @default(0)
+  price           Decimal    @db.Decimal(10, 2)
+  currency        String     @default("EUR")
+  priceEur        Decimal?   @db.Decimal(10, 2)
+  taxes           Decimal?   @db.Decimal(10, 2)
+  fees            Decimal?   @db.Decimal(10, 2)
+  includedBagKg   Int?
+  deeplink        String?
+  status          FareStatus @default(UNVERIFIED)
+  alertLevel      AlertLevel @default(NORMAL)
+  resultHash      String     @unique
+  source          String
+  fetchedAt       DateTime   @default(now())
+  expiresAt       DateTime?
+  verifiedAt      DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  opportunityScore Float?
+  confidenceScore  Float?
+  personalFitScore Float?
+  expiryRiskScore  Float?
+  travelFriction   Float?
+
+  route   Route         @relation(fields: [routeId], references: [id])
+  job     SearchJob?    @relation(fields: [jobId], references: [id])
+  airline Airline       @relation(fields: [airlineCode], references: [iataCode])
+
+  segments           FareSegment[]
+  snapshots          FareSnapshot[]
+  priceHistory       PriceHistory[]
+  favorites          UserFavorite[]
+  feedbacks          UserFeedback[]
+  silentRejections   SilentRejection[]
+  notificationEvents NotificationEvent[]
+
+  @@index([routeId, departureAt, price])
+  @@index([status, alertLevel])
   @@index([fetchedAt])
+  @@map("fare_results")
+}
+
+model FareSegment {
+  id              String     @id @default(cuid())
+  fareId          String
+  sequence        Int
+  originCode      String
+  destinationCode String
+  airlineCode     String
+  flightNumber    String?
+  departureAt     DateTime
+  arrivalAt       DateTime
+  durationMinutes Int?
+  cabinClass      CabinClass @default(ECONOMY)
+  aircraft        String?
+
+  fare    FareResult @relation(fields: [fareId], references: [id], onDelete: Cascade)
+  airline Airline    @relation(fields: [airlineCode], references: [iataCode])
+
+  @@index([fareId, sequence])
+  @@map("fare_segments")
+}
+
+model FareSnapshot {
+  id         String     @id @default(cuid())
+  fareId     String
+  price      Decimal    @db.Decimal(10, 2)
+  currency   String     @default("EUR")
+  status     FareStatus
+  recordedAt DateTime   @default(now())
+
+  fare FareResult @relation(fields: [fareId], references: [id], onDelete: Cascade)
+
+  @@index([fareId, recordedAt])
+  @@map("fare_snapshots")
 }
 
 model PriceHistory {
+  id             String     @id @default(cuid())
+  routeId        String
+  fareId         String?
+  cabinClass     CabinClass @default(ECONOMY)
+  price          Decimal    @db.Decimal(10, 2)
+  currency       String     @default("EUR")
+  departureMonth String
+  recordedAt     DateTime   @default(now())
+
+  route Route      @relation(fields: [routeId], references: [id])
+  fare  FareResult? @relation(fields: [fareId], references: [id], onDelete: SetNull)
+
+  @@index([routeId, departureMonth, cabinClass])
+  @@index([recordedAt])
+  @@map("price_history")
+}
+
+// ─── Watchlists & Alerts ─────────────────────────────────────────────────────
+
+model Watchlist {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  originCode      String?
+  destinationCode String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  priceTargets      PriceTarget[]
+  notificationRules NotificationRule[]
+
+  @@index([userId, isActive])
+  @@map("watchlists")
+}
+
+model PriceTarget {
+  id              String     @id @default(cuid())
+  userId          String
+  watchlistId     String?
+  originCode      String
+  destinationCode String
+  cabinClass      CabinClass @default(ECONOMY)
+  maxPrice        Decimal    @db.Decimal(10, 2)
+  currency        String     @default("EUR")
+  departureDateMin DateTime?
+  departureDateMax DateTime?
+  minTripDays     Int?
+  maxTripDays     Int?
+  isActive        Boolean    @default(true)
+  triggeredAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchlist Watchlist? @relation(fields: [watchlistId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isActive])
+  @@index([originCode, destinationCode])
+  @@map("price_targets")
+}
+
+model NotificationRule {
+  id            String     @id @default(cuid())
+  userId        String
+  watchlistId   String?
+  name          String
+  minAlertLevel AlertLevel @default(STRONG)
+  minScore      Float      @default(70.0)
+  channels      String[]
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchlist Watchlist? @relation(fields: [watchlistId], references: [id], onDelete: SetNull)
+  events    NotificationEvent[]
+
+  @@index([userId, isActive])
+  @@map("notification_rules")
+}
+
+model NotificationEvent {
+  id           String             @id @default(cuid())
+  userId       String
+  ruleId       String?
+  fareId       String?
+  channel      String
+  status       NotificationStatus @default(PENDING)
+  dedupeHash   String?            @unique
+  message      String?
+  sentAt       DateTime?
+  failedAt     DateTime?
+  errorMessage String?
+  createdAt    DateTime           @default(now())
+
+  user User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rule NotificationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  fare FareResult?       @relation(fields: [fareId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([createdAt])
+  @@map("notification_events")
+}
+
+// ─── User Activity ───────────────────────────────────────────────────────────
+
+model UserFavorite {
+  id      String   @id @default(cuid())
+  userId  String
+  fareId  String
+  note    String?
+  savedAt DateTime @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fare FareResult @relation(fields: [fareId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fareId])
+  @@map("user_favorites")
+}
+
+model UserFeedback {
+  id        String       @id @default(cuid())
+  userId    String
+  fareId    String
+  type      FeedbackType
+  note      String?
+  createdAt DateTime     @default(now())
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fare FareResult @relation(fields: [fareId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fareId])
+  @@map("user_feedback")
+}
+
+model SilentRejection {
   id         String   @id @default(cuid())
-  flightId   String
-  price      Decimal  @db.Decimal(10, 2)
-  currency   String   @default("BRL")
-  recordedAt DateTime @default(now())
+  fareId     String
+  userId     String?
+  reason     String
+  rejectedAt DateTime @default(now())
 
-  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  fare FareResult @relation(fields: [fareId], references: [id], onDelete: Cascade)
 
-  @@index([flightId, recordedAt])
+  @@map("silent_rejections")
+}
+
+// ─── Infrastructure ───────────────────────────────────────────────────────────
+
+model CrawlerLog {
+  id          String   @id @default(cuid())
+  adapterId   String
+  url         String?
+  method      String?
+  statusCode  Int?
+  durationMs  Int?
+  usedProxy   Boolean  @default(false)
+  usedBrowser Boolean  @default(false)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  adapter SourceAdapter @relation(fields: [adapterId], references: [id], onDelete: Cascade)
+
+  @@index([adapterId, createdAt])
+  @@map("crawler_logs")
+}
+
+model ErrorLog {
+  id        String   @id @default(cuid())
+  source    String
+  level     String   @default("error")
+  message   String
+  stack     String?
+  context   Json?
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+  @@index([level])
+  @@map("error_logs")
+}
+
+model AdapterHealthCheck {
+  id         String   @id @default(cuid())
+  adapterId  String
+  isHealthy  Boolean
+  responseMs Int?
+  statusCode Int?
+  error      String?
+  checkedAt  DateTime @default(now())
+
+  adapter SourceAdapter @relation(fields: [adapterId], references: [id], onDelete: Cascade)
+
+  @@index([adapterId, checkedAt])
+  @@map("adapter_health_checks")
+}
+
+model FeatureFlag {
+  key         String   @id
+  value       Boolean  @default(false)
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("feature_flags")
 }

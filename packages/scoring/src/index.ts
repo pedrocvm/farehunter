@@ -1,22 +1,31 @@
 import { z } from 'zod'
-import type { Flight } from '@farehunter/core'
+import type { NormalizedFareResult, OpportunityScore, ConfidenceScore, TravelFrictionScore } from '@farehunter/core'
 
 export const ScoreResultSchema = z.object({
-  score: z.number().min(0).max(100),
-  breakdown: z.object({
-    priceScore: z.number(),
-    directFlightBonus: z.number(),
-  }),
+  opportunityScore: z.number().min(0).max(100),
+  confidenceScore: z.number().min(0).max(100),
+  personalFitScore: z.number().min(0).max(100),
+  expiryRiskScore: z.number().min(0).max(100),
+  travelFriction: z.number().min(0).max(100),
 })
 
 export type ScoreResult = z.infer<typeof ScoreResultSchema>
 
-export function scoreFlight(_flight: Flight, _historicalAvg?: number): ScoreResult {
+export interface ScoreBreakdown {
+  opportunity: OpportunityScore
+  confidence: ConfidenceScore
+  travelFriction: TravelFrictionScore
+}
+
+export function scoreFare(
+  _fare: NormalizedFareResult,
+  _historicalAvgEur?: number,
+): ScoreResult {
   return {
-    score: 0,
-    breakdown: {
-      priceScore: 0,
-      directFlightBonus: 0,
-    },
+    opportunityScore: 0,
+    confidenceScore: 0,
+    personalFitScore: 0,
+    expiryRiskScore: 0,
+    travelFriction: 0,
   }
 }
