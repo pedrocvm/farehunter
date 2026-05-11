@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Flight {
+  id          String   @id @default(cuid())
+  origin      String
+  destination String
+  departureAt DateTime
+  returnAt    DateTime?
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("BRL")
+  airline     String
+  stops       Int      @default(0)
+  source      String
+  score       Float?
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  priceHistory PriceHistory[]
+
+  @@index([origin, destination])
+  @@index([fetchedAt])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  flightId   String
+  price      Decimal  @db.Decimal(10, 2)
+  currency   String   @default("BRL")
+  recordedAt DateTime @default(now())
+
+  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@index([flightId, recordedAt])
+}
