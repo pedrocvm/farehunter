@@ -104,7 +104,14 @@ function AlertBadge({ status, confidenceScore }: { status?: DealStatus; confiden
 
 // --- Componente principal ---
 
-export function DealCard({ deal }: { deal: Deal }) {
+type DealCardProps = {
+  deal: Deal
+  // onClick opcional: quando fornecido, intercepta o clique e abre o modal
+  // ao invés de navegar para a página /deals/[id].
+  onClick?: (e: React.MouseEvent) => void
+}
+
+export function DealCard({ deal, onClick }: DealCardProps) {
   const duration = formatDuration(deal.duration)
   const hasScores =
     deal.opportunityScore != null ||
@@ -114,6 +121,7 @@ export function DealCard({ deal }: { deal: Deal }) {
   return (
     <Link
       href={`/deals/${deal.id}`}
+      onClick={onClick}
       className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
     >
       <article
