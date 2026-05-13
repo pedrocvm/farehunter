@@ -106,14 +106,22 @@ export function DashboardClient({ deals }: { deals: Deal[] }) {
       {/* Painel de filtros */}
       <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold">Filtros</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Filtros</span>
+            {isFiltered && (
+              // Conta quantos filtros estão ativos — feedback visual rápido
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">
+                {Object.values(filters).filter(Boolean).length}
+              </span>
+            )}
+          </div>
           {isFiltered && (
             <button
               type="button"
               onClick={() => setFilters(EMPTY_FILTERS)}
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
             >
-              Limpar
+              Limpar filtros
             </button>
           )}
         </div>
@@ -198,18 +206,19 @@ export function DashboardClient({ deals }: { deals: Deal[] }) {
         </div>
       </div>
 
-      {/* Contagem */}
-      <div>
+      {/* Contagem — só exibe quando há resultados */}
+      {filtered.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          {filtered.length === 0
-            ? 'Nenhuma oferta encontrada.'
-            : `${filtered.length} ${filtered.length === 1 ? 'oferta' : 'ofertas'} encontrada${filtered.length === 1 ? '' : 's'}.`}
+          {filtered.length === 1 ? '1 oferta encontrada.' : `${filtered.length} ofertas encontradas.`}
         </p>
-      </div>
+      )}
 
       {/* Grid de cards ou estado vazio */}
       {filtered.length === 0 ? (
-        <EmptyFiltered hasFilters={isFiltered} />
+        <EmptyFiltered
+          hasFilters={isFiltered}
+          onClear={() => setFilters(EMPTY_FILTERS)}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((deal) => (
@@ -221,19 +230,64 @@ export function DashboardClient({ deals }: { deals: Deal[] }) {
   )
 }
 
-function EmptyFiltered({ hasFilters }: { hasFilters: boolean }) {
+type EmptyFilteredProps = {
+  hasFilters: boolean
+  onClear: () => void
+}
+
+function EmptyFiltered({ hasFilters, onClear }: EmptyFilteredProps) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
       {hasFilters ? (
         <>
-          <p className="text-lg font-medium">Nenhuma oferta encontrada com esses filtros.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tente ampliar os critérios ou limpe os filtros.
+          {/* Ícone: lupa com X — indica busca sem resultado */}
+          <svg
+            className="mb-4 h-10 w-10 text-muted-foreground/40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m16.5 16.5 4 4" />
+            <path d="m8.5 8.5 5 5m0-5-5 5" />
+          </svg>
+          <p className="text-base font-medium">
+            Nenhuma oferta encontrada com esses filtros.
           </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tente ampliar os critérios de busca.
+          </p>
+          {/* Atalho para limpar sem precisar rolar até o painel */}
+          <button
+            type="button"
+            onClick={onClear}
+            className="mt-4 rounded-md border border-border px-4 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Limpar filtros
+          </button>
         </>
       ) : (
         <>
-          <p className="text-lg font-medium">Nenhuma oferta disponível</p>
+          {/* Ícone: radar — indica ausência de dados, não erro */}
+          <svg
+            className="mb-4 h-10 w-10 text-muted-foreground/40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="2" />
+            <path d="M12 2a10 10 0 0 1 10 10" />
+            <path d="M12 6a6 6 0 0 1 6 6" />
+          </svg>
+          <p className="text-base font-medium">Nenhuma oferta disponível</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Volte mais tarde — o radar continua varrendo.
           </p>
