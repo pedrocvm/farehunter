@@ -1,13 +1,22 @@
-export default function HomePage() {
+import { getDeals } from '@/lib/data'
+import { DashboardClient } from '@/components/dashboard-client'
+
+export const dynamic = 'force-dynamic'
+
+export default async function DashboardPage() {
+  const deals = await getDeals()
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">FareHunter</h1>
-        <p className="text-muted-foreground text-lg">
-          Radar inteligente de oportunidades aéreas
+    <div className="space-y-2">
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight">Ofertas em destaque</h2>
+        <p className="text-sm text-muted-foreground">
+          Oportunidades detectadas pelo radar — atualizadas em tempo real.
         </p>
-        <p className="text-sm text-muted-foreground">Em construção</p>
       </div>
-    </main>
+
+      {/* DashboardClient gerencia filtros e renderizacao dos cards (client-side) */}
+      <DashboardClient deals={deals} />
+    </div>
   )
 }
