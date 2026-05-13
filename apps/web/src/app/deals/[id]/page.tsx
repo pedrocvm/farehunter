@@ -91,7 +91,8 @@ function ScoreSection({ deal }: { deal: Deal }) {
           <div key={label} className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{label}</span>
-              <ScoreBadge label={label} score={score!} compact />
+              {/* label já aparece no <span> ao lado — badge exibe só o número */}
+              <ScoreBadge score={score!} />
             </div>
             <ScoreBar score={score!} />
           </div>
