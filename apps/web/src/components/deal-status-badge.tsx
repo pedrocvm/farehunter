@@ -1,13 +1,10 @@
 import { cn } from '@/lib/utils'
+import type { DealStatus } from '@/lib/types'
 
-export type DealStatus =
-  | 'ACTIVE'
-  | 'EXPIRED'
-  | 'UNVERIFIED'
-  | 'REVALIDATED'
-  | 'POSSIBLE_ERROR'
-  | 'LOW_CONFIDENCE'
-  | 'NEEDS_REVIEW'
+// DealStatus é definido em @/lib/types — importado aqui para uso no componente.
+// Re-exportado para que consumidores que só precisam do tipo possam importar
+// de um lugar só, sem precisar conhecer a estrutura interna.
+export type { DealStatus }
 
 type StatusConfig = {
   label: string

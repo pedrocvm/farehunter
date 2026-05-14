@@ -1,4 +1,4 @@
-import type { Deal } from '@/components/deal-card'
+import type { Deal } from '@/lib/types'
 
 // Dados mock ricos — cobrem todos os status e faixas de score para
 // permitir testar a UI completa antes da API real estar pronta.
