@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { DealCard, type Deal } from '@/components/deal-card'
+import { DealModal } from '@/components/deal-modal'
 import { type DealStatus, statusLabel } from '@/components/deal-status-badge'
 import { cn } from '@/lib/utils'
 
@@ -61,6 +62,8 @@ const inputCls = selectCls
 
 export function DashboardClient({ deals }: { deals: Deal[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  // null = modal fechado; Deal = modal aberto com os dados da oferta selecionada
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
 
   // Opcoes dinamicas derivadas dos dados reais
   const origins = useMemo(() => unique(deals.map((d) => d.origin)).sort(), [deals])
@@ -222,9 +225,21 @@ export function DashboardClient({ deals }: { deals: Deal[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((deal) => (
-            <DealCard key={deal.id} deal={deal} />
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              onClick={(e) => {
+                e.preventDefault()
+                setSelectedDeal(deal)
+              }}
+            />
           ))}
         </div>
+      )}
+
+      {/* Modal — renderizado sobre o dashboard quando uma oferta é selecionada */}
+      {selectedDeal && (
+        <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
       )}
     </section>
   )
