@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 
 const NAV_LINKS = [
   { href: '/',              label: 'Ofertas'    },
+  { href: '/inbox',         label: 'Inbox'      },
   { href: '/search',        label: 'Buscar'     },
   { href: '/watchlists',    label: 'Watchlists' },
   { href: '/price-targets', label: 'Metas'      },
