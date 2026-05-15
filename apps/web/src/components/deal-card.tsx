@@ -1,29 +1,12 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { ScoreBadge } from '@/components/score-badge'
-import { DealStatusBadge, type DealStatus } from '@/components/deal-status-badge'
+import { DealStatusBadge } from '@/components/deal-status-badge'
+import type { Deal, DealStatus } from '@/lib/types'
 
-// Tipo local — independente do schema do backend para resiliencia a campos extras.
-// Todos os campos alem do nucleo sao opcionais: o card degrada graciosamente.
-export type Deal = {
-  id: string
-  origin: string
-  destination: string
-  airline: string
-  price: number
-  currency: string
-  departureAt: string            // ISO
-  returnAt?: string | null       // ISO — null/ausente = somente ida
-  stops: number
-  duration?: string | number | null
-  // Scores opcionais — disponiveis quando a API de scoring estiver integrada
-  opportunityScore?: number
-  confidenceScore?: number
-  personalFitScore?: number
-  status?: DealStatus
-  cabinClass?: string
-  baggage?: string
-}
+// Re-exporta Deal para que importações existentes de '@/components/deal-card'
+// continuem funcionando sem alteração nos consumers.
+export type { Deal }
 
 // --- Formatadores utilitarios ---
 

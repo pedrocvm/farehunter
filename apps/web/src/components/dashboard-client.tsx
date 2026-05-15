@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { DealCard, type Deal } from '@/components/deal-card'
+import type { Deal, DealStatus } from '@/lib/types'
+import { DealCard } from '@/components/deal-card'
 import { DealModal } from '@/components/deal-modal'
-import { type DealStatus, statusLabel } from '@/components/deal-status-badge'
+import { statusLabel } from '@/components/deal-status-badge'
 import { cn } from '@/lib/utils'
 
 // Todos os status possiveis — usados para popular o select de filtro
