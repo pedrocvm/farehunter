@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: '/search',        label: 'Buscar'     },
   { href: '/watchlists',    label: 'Watchlists' },
   { href: '/price-targets', label: 'Metas'      },
+  { href: '/settings',      label: 'Config'     },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
