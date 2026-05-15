@@ -1,16 +1,16 @@
-import { SearchForm } from '@/components/search-form'
+import { AdvancedSearchForm } from '@/components/advanced-search-form'
 
 export default function SearchPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Busca manual</h2>
+        <h1 className="text-2xl font-semibold tracking-tight">Buscar passagens</h1>
         <p className="text-sm text-muted-foreground">
-          Informe a rota e preferências — o radar buscará as melhores opções.
+          Escolha o modo de busca e informe suas preferências.
         </p>
       </div>
 
-      <SearchForm />
+      <AdvancedSearchForm />
     </div>
   )
 }
