@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 }
 
 const NAV_LINKS = [
-  { href: '/',            label: 'Ofertas'     },
-  { href: '/search',      label: 'Buscar'      },
-  { href: '/watchlists',  label: 'Watchlists'  },
+  { href: '/',              label: 'Ofertas'    },
+  { href: '/search',        label: 'Buscar'     },
+  { href: '/watchlists',    label: 'Watchlists' },
+  { href: '/price-targets', label: 'Metas'      },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
